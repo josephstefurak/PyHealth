@@ -19,10 +19,17 @@ the end of the window. ``duration`` is the time from ICU admission to death, or
 to ICU discharge when no death is recorded. ``event_source`` selects which
 deaths count:
 
-* ``"any"`` (default, the paper's definition): the death time of the stay's
-  hospital admission, otherwise the patient's recorded date of death, which
-  also covers deaths after discharge.
-* ``"hospital"``: only deaths during the stay's hospital admission.
+* ``"hospital"`` (default): only deaths during the stay's hospital admission.
+* ``"any"``: the death time of the stay's hospital admission, otherwise the
+  patient's recorded date of death, which also covers deaths after discharge.
+
+The two give very different cohorts. On MIMIC-IV 3.1, ``"hospital"`` yields
+66,131 stays of which 10.7% end in death, with a longest time of 247 days;
+``"any"`` yields 66,112 stays of which 41.1% end in death, with times up to
+5,643 days. Under ``"any"`` a death years after discharge is an event while a
+survivor is censored at ICU discharge, so censoring is informative; prefer
+``"hospital"`` unless that is intended. (The paper reports 18% deaths for its
+own cohort.)
 
 A patient with several qualifying stays gives several samples (or only the
 earliest with ``first_stay_only=True``), so split by patient.
@@ -70,7 +77,7 @@ Relation to other components
      - ICU admission
    * - Event
      - In-hospital death
-     - Any recorded death, or in-hospital death
+     - In-hospital death, or any recorded death
    * - Censoring
      - Hospital discharge
      - ICU discharge

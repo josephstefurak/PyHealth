@@ -211,14 +211,17 @@ def test_death_inside_the_window_is_excluded():
     assert task(_patient(stays, deathtimes={1: T0 + _hours(23)})) == []
     assert task(_patient(stays, deathtimes={1: T0 + _hours(24)})) == []
     assert len(task(_patient(stays, deathtimes={1: T0 + _hours(25)}))) == 1
-    # A recorded date of death inside the window excludes the stay as well.
-    assert task(_patient(stays, dod="2150-03-01")) == []
+    # With "any", a recorded date of death inside the window excludes the stay.
+    any_death = FirstDayICUSurvivalMIMIC4(event_source="any")
+    assert any_death(_patient(stays, dod="2150-03-01")) == []
+    assert len(task(_patient(stays, dod="2150-03-01"))) == 1
 
 
 def test_event_source_differs_only_on_out_of_hospital_death():
     stays = [(10, 1, T0, 48)]
     any_death = FirstDayICUSurvivalMIMIC4(event_source="any")
-    hospital = FirstDayICUSurvivalMIMIC4(event_source="hospital")
+    hospital = FirstDayICUSurvivalMIMIC4()
+    assert hospital.event_source == "hospital"
 
     # Died after discharge: only a date of death is recorded.
     outside = _patient(stays, dod="2150-03-11")
@@ -398,8 +401,7 @@ def test_patient_with_two_qualifying_stays():
     assert _value(task, first, "heart_rate_mean") == 60.0
     assert _value(task, second, "heart_rate_mean") == 120.0
     # In-hospital deaths belong to their own admission only.
-    hospital = FirstDayICUSurvivalMIMIC4(event_source="hospital")
-    assert [sample["event"] for sample in hospital(patient)] == [[0.0], [1.0]]
+    assert (first["event"], second["event"]) == ([0.0], [1.0])
     assert second["duration"] == [pytest.approx(200 / 24)]
 
     only_first = FirstDayICUSurvivalMIMIC4(first_stay_only=True)

@@ -115,7 +115,8 @@ class FirstDayICUSurvivalMIMIC4(BaseTask):
     variables with their last value, measures time from the end of the window,
     counts in-hospital deaths only and censors at hospital discharge. This
     task observes 24 hours, uses minimum, mean and maximum, measures time from
-    ICU admission, can count any recorded death and censors at ICU discharge.
+    ICU admission, can also count deaths recorded after discharge and censors
+    at ICU discharge.
 
     How this differs from the paper's cohort: features are aggregated from the
     raw tables, not taken from the mimic-code derived tables, and the SOFA
@@ -125,10 +126,13 @@ class FirstDayICUSurvivalMIMIC4(BaseTask):
     ``admissions`` and ``icustays`` are always loaded).
 
     Args:
-        event_source: Which deaths count as events. ``"any"`` (default, the
-            paper's definition) uses the death time of the stay's hospital
-            admission and otherwise the patient's recorded date of death;
-            ``"hospital"`` counts only deaths during that hospital admission.
+        event_source: Which deaths count as events. ``"hospital"`` (default)
+            counts deaths during the stay's hospital admission. ``"any"`` also
+            counts the patient's recorded date of death when the admission has
+            no death time, so deaths long after discharge become events while
+            survivors are still censored at ICU discharge; on MIMIC-IV 3.1
+            this raises the share of events from 10.7% to 41.1% and the
+            longest time from 247 to 5,643 days.
         feature_set: ``"all"`` (default), ``"vitals"`` (demographics, vitals,
             weight and height) or ``"labs"`` (demographics and labs).
         observation_hours: Length of the observation window in hours.
@@ -246,7 +250,7 @@ class FirstDayICUSurvivalMIMIC4(BaseTask):
 
     def __init__(
         self,
-        event_source: EventSource = "any",
+        event_source: EventSource = "hospital",
         feature_set: FeatureSet = "all",
         observation_hours: int = 24,
         first_stay_only: bool = False,
