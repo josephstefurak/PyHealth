@@ -157,6 +157,9 @@ from .survival_metabric import (
     MetabricSurvivalPrediction as MetabricSurvivalPrediction,
 )
 from .survival_mimic4 import InHospitalSurvivalMIMIC4 as InHospitalSurvivalMIMIC4
+from .survival_first_day_mimic4 import (
+    FirstDayICUSurvivalMIMIC4 as FirstDayICUSurvivalMIMIC4,
+)
 from .acuity_mimic4 import ICUAcuityMIMIC4 as ICUAcuityMIMIC4
 from .survival_preprocess_support2 import SurvivalPreprocessSupport2
 from .survival_time_to_event import (
