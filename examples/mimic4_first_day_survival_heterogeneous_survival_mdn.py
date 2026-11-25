@@ -188,6 +188,8 @@ BASELINE = {
     "feature_set": "all",
 }
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+#: Most (row, time) pairs evaluated in one call when predicting survival curves.
+EVAL_CELLS = 2**22
 
 
 @dataclass
@@ -418,12 +420,12 @@ def train_model(model, train: Part, valid: Part, seed: int, args) -> tuple[int, 
             torch.nn.utils.clip_grad_norm_(model.parameters(), 100.0)
             optimizer.step()
         valid_nll = censored_nll(model, valid)
-        if valid_nll < best:
-            best, best_epoch, waited = valid_nll, epoch, 0
         if not math.isfinite(valid_nll):
             raise RuntimeError(
                 f"validation NLL is {valid_nll} after epoch {epoch}; training diverged"
             )
+        if valid_nll < best:
+            best, best_epoch, waited = valid_nll, epoch, 0
             best_state = copy.deepcopy(model.state_dict())
         else:
             waited += 1
@@ -440,9 +442,11 @@ def evaluate(model, test: Part) -> dict[str, float]:
 
     def predict(grid: np.ndarray) -> np.ndarray:
         times = torch.as_tensor(grid, dtype=torch.float32)
+        # Bound memory by rows x times, whatever the length of the time grid.
+        step = max(1, min(4096, EVAL_CELLS // max(1, len(times))))
         rows = [
-            model.predict_survival(test.x[begin : begin + 4096], times).numpy()
-            for begin in range(0, len(test.x), 4096)
+            model.predict_survival(test.x[begin : begin + step], times).numpy()
+            for begin in range(0, len(test.x), step)
         ]
         return np.concatenate(rows, axis=0)
 
