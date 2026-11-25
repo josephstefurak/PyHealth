@@ -157,6 +157,9 @@ def test_invalid_configuration_raises():
         FirstDayICUSurvivalMIMIC4(feature_set="everything")
     with pytest.raises(ValueError, match="observation_hours"):
         FirstDayICUSurvivalMIMIC4(observation_hours=0)
+    for not_whole_hours in (24.5, 24.0, "24", True):
+        with pytest.raises(ValueError, match="observation_hours"):
+            FirstDayICUSurvivalMIMIC4(observation_hours=not_whole_hours)
 
 
 def test_schema_follows_the_processing_options():

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timedelta
+from numbers import Integral
 from typing import Any, ClassVar, Literal
 
 import polars as pl
@@ -139,7 +140,7 @@ class FirstDayICUSurvivalMIMIC4(BaseTask):
             up to a day early.
         feature_set: ``"all"`` (default), ``"vitals"`` (demographics, vitals,
             weight and height) or ``"labs"`` (demographics and labs).
-        observation_hours: Length of the observation window in hours.
+        observation_hours: Length of the observation window in whole hours.
         first_stay_only: Keep only each patient's earliest qualifying stay.
         standardize: Z-score the features and fill missing values with zero.
             If ``False``, raw values are returned and missing values stay NaN.
@@ -266,8 +267,12 @@ class FirstDayICUSurvivalMIMIC4(BaseTask):
             raise ValueError("event_source must be 'any' or 'hospital'")
         if feature_set not in ("all", "vitals", "labs"):
             raise ValueError("feature_set must be 'all', 'vitals' or 'labs'")
-        if isinstance(observation_hours, bool) or observation_hours < 1:
-            raise ValueError("observation_hours must be at least 1")
+        if (
+            isinstance(observation_hours, bool)
+            or not isinstance(observation_hours, Integral)
+            or observation_hours < 1
+        ):
+            raise ValueError("observation_hours must be an integer of at least 1")
         self.event_source = event_source
         self.feature_set = feature_set
         self.observation_hours = int(observation_hours)
