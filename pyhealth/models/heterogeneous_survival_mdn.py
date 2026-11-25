@@ -117,10 +117,14 @@ class _HeterogeneousMDNDistribution:
     def log_survival(self, time: Tensor) -> Tensor:
         """Return ``log S(time | x)`` without ``1 - CDF`` cancellation."""
         z = self._standardized_latent(time)
+        # The Gaussian term of a logistic component is discarded below, but its
+        # gradient is not: far in the tail it is infinite in float32, and zero
+        # times infinity is NaN. Evaluate it at z = 0 for those components.
+        gaussian_z = torch.where(self.logistic_mask, torch.zeros_like(z), z)
         component_log_survival = torch.where(
             self.logistic_mask,
             self.params.shapes * F.logsigmoid(-z),
-            torch.special.log_ndtr(-z),
+            torch.special.log_ndtr(-gaussian_z),
         )
         return torch.logsumexp(
             self.params.log_weights + component_log_survival,
@@ -184,6 +188,11 @@ class _HeterogeneousSurvivalMDNNetwork(_SurvivalMDNNetwork):
         A shape of one makes every logistic component a standard (symmetric)
         logistic distribution at the start of training.
         """
+        if self.min_shape >= 1.0:
+            raise ValueError(
+                "min_shape must be below 1 with reference_initialization, "
+                "which starts every logistic shape at one"
+            )
         super().initialize_reference_heads()
         with torch.no_grad():
             self.shape_head.weight.zero_()
@@ -318,7 +327,8 @@ class HeterogeneousSurvivalMDN(BaseModel):
             baseline) or ``"exp"``.
         min_scale: Minimum component scale for numerical safety.
         min_shape: Positive constant added to the softplus of the shape head,
-            so logistic shapes stay strictly positive.
+            so logistic shapes stay strictly positive. Must be below one when
+            ``reference_initialization`` is ``True``.
         time_grid: Times at which ``y_prob`` returns survival probabilities.
             If omitted, a 128-point grid from 0.001 to 5.6 is used. Pass a
             grid that covers the durations of the dataset at hand.

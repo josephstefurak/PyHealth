@@ -148,6 +148,12 @@ def test_invalid_configuration_raises():
         HeterogeneousSurvivalMDN(dataset, component_families="logistic")
     with pytest.raises(ValueError, match="min_shape"):
         HeterogeneousSurvivalMDN(dataset, min_shape=0.0)
+    with pytest.raises(ValueError, match="below 1"):
+        HeterogeneousSurvivalMDN(dataset, min_shape=1.0)
+    unit_floor = HeterogeneousSurvivalMDN(
+        dataset, min_shape=1.0, reference_initialization=False
+    )
+    assert unit_floor.network.min_shape == 1.0
     with pytest.raises(ValueError, match="min_scale"):
         HeterogeneousSurvivalMDN(dataset, min_scale=-1.0)
     with pytest.raises(ValueError, match="time_transform"):
@@ -409,6 +415,50 @@ def test_large_times_give_finite_loss_and_gradients(transform, families):
         for parameter in model.parameters()
         if parameter.grad is not None
     )
+
+
+def test_unused_gaussian_term_does_not_poison_logistic_gradients():
+    # Narrow logistic components far below late times: standardized times of
+    # 5e4 to 3e5, where the float32 gradient of the Gaussian term is infinite.
+    means = torch.zeros(1, 2, requires_grad=True)
+    scales = torch.full((1, 2), 1e-3, requires_grad=True)
+    shapes = torch.full((1, 2), 2.0, requires_grad=True)
+    log_weights = torch.full((251, 2), 0.5).log()
+    params = _HeterogeneousMDNParameters(
+        log_weights=log_weights,
+        means=means,
+        scales=scales,
+        raw_weight_logits=log_weights,
+        raw_scales=scales,
+        shapes=shapes,
+        raw_shapes=shapes,
+    )
+    distribution = _HeterogeneousMDNDistribution(
+        params,
+        torch.tensor([True, True]),
+        _make_time_transform("softplus"),
+    )
+    time = torch.linspace(50.0, 300.0, 251)
+    distribution.log_survival(time).sum().backward()
+    # d/dmean of shape * logsigmoid(-z) is shape / scale = 2000 per time, and
+    # each of the two equal components carries half of it: 251 * 1000. The
+    # float32 sum at these magnitudes is within one percent of that.
+    assert torch.allclose(means.grad, torch.full((1, 2), 251000.0), rtol=1e-2)
+    assert torch.isfinite(scales.grad).all()
+    assert torch.isfinite(shapes.grad).all()
+
+
+def test_forward_from_embedding_matches_forward():
+    dataset = _make_dataset()
+    model = HeterogeneousSurvivalMDN(dataset, hidden_dim=8, component_families=MIXED)
+    _randomize(model)
+    model.eval()
+    batch = _batch(dataset)
+    labels = {key: batch[key] for key in ("duration", "event")}
+    expected = model(**batch)
+    actual = model.forward_from_embedding(batch["features"], **labels)
+    for key in expected:
+        assert torch.equal(actual[key], expected[key]), key
 
 
 def test_state_dict_round_trip():
