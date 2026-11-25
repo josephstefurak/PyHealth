@@ -420,6 +420,10 @@ def train_model(model, train: Part, valid: Part, seed: int, args) -> tuple[int, 
         valid_nll = censored_nll(model, valid)
         if valid_nll < best:
             best, best_epoch, waited = valid_nll, epoch, 0
+        if not math.isfinite(valid_nll):
+            raise RuntimeError(
+                f"validation NLL is {valid_nll} after epoch {epoch}; training diverged"
+            )
             best_state = copy.deepcopy(model.state_dict())
         else:
             waited += 1
