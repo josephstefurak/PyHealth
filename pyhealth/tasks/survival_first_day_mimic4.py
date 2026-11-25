@@ -120,7 +120,9 @@ class FirstDayICUSurvivalMIMIC4(BaseTask):
 
     How this differs from the paper's cohort: features are aggregated from the
     raw tables, not taken from the mimic-code derived tables, and the SOFA
-    score is not included.
+    score is not included. The paper counts any recorded date of death in an
+    earlier MIMIC-IV release and reports 18% deaths; neither ``event_source``
+    reproduces that share on MIMIC-IV 3.1.
 
     Requires the ``chartevents`` and ``labevents`` tables (``patients``,
     ``admissions`` and ``icustays`` are always loaded).

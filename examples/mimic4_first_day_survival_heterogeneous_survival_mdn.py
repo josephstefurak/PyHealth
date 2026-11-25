@@ -22,7 +22,9 @@ Ablations (``--ablation``); each arm changes one setting of the baseline
   ``"any"`` (any recorded death, including deaths after discharge).
 - ``features`` (task): all 101 features vs vitals vs labs.
 
-Every arm uses the same splits, seeds, optimizer and stopping rule.
+Every arm uses the same split seeds, optimizer and stopping rule. The two
+death definitions give slightly different cohorts, so the same seed does not
+assign their patients to the same parts; all other arms share their splits.
 
 Run on synthetic data (the default; demonstrates execution only)::
 
@@ -63,20 +65,25 @@ hyperparameter tuning):
     mixed     0.662 ± 0.004  -0.350 ± 0.026  -0.081 ± 0.001  0.448 ± 0.007
     ========  =============  ==============  ==============  =============
 
-    - Ranking is the same for all three: the C^td differences are within
-      one standard error at every horizon (logistic minus Gaussian
-      +0.006 ± 0.004 at the full horizon, paired by split).
+    - Ranking is the same for all three: no C^td difference between two
+      families reaches two standard errors at any horizon (logistic minus
+      Gaussian +0.006 ± 0.004 at the full horizon, paired by split).
     - Logistic and mixed components fit the far tail better: full-horizon
       IBLL improves by 0.24 ± 0.04 and test NLL by 0.033 ± 0.006, on all five
-      splits. At the truncated horizons the three models are equal within one
-      standard error (IBLL at 0.2: -0.189, -0.193, -0.192), so the gain comes
-      from late times with few patients still at risk.
-    - Mixed and all-logistic are indistinguishable. IBS does not separate the
+      splits. At the truncated horizons there is no gain (IBLL at 0.2: -0.189,
+      -0.193, -0.192; at 0.4 the Gaussian model is ahead of the logistic one
+      by 0.002 ± 0.001, paired), so the gain comes from late times with few
+      patients still at risk.
+    - Mixed and all-logistic are close: paired, logistic is ahead by
+      0.005 ± 0.002 in full-horizon IBLL and mixed by 0.002 ± 0.001 in test
+      NLL. The mixed arm lists its Gaussian components first, which the
+      reference initialization starts at the lowest latent means; other
+      orders were not tried. IBS does not separate the
       families (0.095, 0.099, 0.098 at the full horizon, standard errors
       0.005 to 0.008).
     - The Gaussian arm is ``SurvivalMDN``; the other two are
-      ``HeterogeneousSurvivalMDN``. They stopped after about 15, 7 and 6
-      epochs.
+      ``HeterogeneousSurvivalMDN``. Their best validation epochs were about
+      15, 7 and 6.
 
     Time transform, mixed components (model ablation):
 
@@ -87,7 +94,8 @@ hyperparameter tuning):
     exp        0.666 ± 0.002  -0.343 ± 0.023  0.448 ± 0.007
     =========  =============  ==============  =============
 
-    - No difference beyond one standard error.
+    - No difference reaches two standard errors (C^td +0.004 ± 0.003,
+      paired by split).
 
     Feature set, mixed components (task ablation):
 
@@ -117,7 +125,7 @@ hyperparameter tuning):
     ========  =============  ==============  =============  ==========
 
     - With times spanning three orders of magnitude the Gaussian mixture
-      trains about five times longer and ends worse on every metric
+      needs about five times as many epochs and ends worse on every metric
       (C^td -0.033 ± 0.007, all five splits). The two cohorts are not
       comparable with each other; this definition makes censoring
       informative and is shown as a stress test of the tails, not as a
@@ -143,7 +151,7 @@ hyperparameter tuning):
     9 minutes the first time and 1.5 minutes for each further split; training
     one model took 7 to 12 seconds (26 to 94 seconds under ``"any"``).
     PyHealth's event cache could not be built from the full ``chartevents``
-    and ``labevents`` files on this machine (the build passed 55 GB of scratch
+    and ``labevents`` files on this machine (the build reached 55 GB of scratch
     space), so both files were first reduced to the rows the task reads: the
     task's item ids, and for labs only patients with an ICU stay (95.6 million
     of 591 million rows). The task ignores every other row, so the samples
