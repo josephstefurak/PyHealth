@@ -22,6 +22,8 @@ deaths count:
 * ``"hospital"`` (default): only deaths during the stay's hospital admission.
 * ``"any"``: the death time of the stay's hospital admission, otherwise the
   patient's recorded date of death, which also covers deaths after discharge.
+  A death recorded only as a date is timed at midnight of that date, so its
+  duration can be up to a day early.
 
 The two give very different cohorts. On MIMIC-IV 3.1, ``"hospital"`` yields
 66,131 stays of which 10.7% end in death, with a longest time of 247 days;

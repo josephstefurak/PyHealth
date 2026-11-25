@@ -134,7 +134,9 @@ class FirstDayICUSurvivalMIMIC4(BaseTask):
             no death time, so deaths long after discharge become events while
             survivors are still censored at ICU discharge; on MIMIC-IV 3.1
             this raises the share of events from 10.7% to 41.1% and the
-            longest time from 247 to 5,643 days.
+            longest time from 247 to 5,643 days. A death recorded only as a
+            date is timed at midnight of that date, so its duration can be
+            up to a day early.
         feature_set: ``"all"`` (default), ``"vitals"`` (demographics, vitals,
             weight and height) or ``"labs"`` (demographics and labs).
         observation_hours: Length of the observation window in hours.
